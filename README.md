@@ -3,7 +3,8 @@
 The original Hanabi repository from Deepmind was modified in order to test how rule-based agents and learning agents play Hanabi togeher.
 Currently the focus is on only 2 players: one rule-based agent and one learning agent.
 Learning agents are planned to be modifications of agents implemented in [tf-agents](https://www.tensorflow.org/agents/overview).
-tf-agents has to be installed in order to "run examples/rl_env_example.py".
+
+tf-agents has to be installed in order to run "examples/rl_env_example.py".
 
 
 ## Original Readme
