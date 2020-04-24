@@ -21,7 +21,10 @@ from hanabi_learning_environment import rl_env
 from hanabi_learning_environment.agents.random_agent import RandomAgent
 from hanabi_learning_environment.agents.simple_agent import SimpleAgent
 
-AGENT_CLASSES = {'SimpleAgent': SimpleAgent, 'RandomAgent': RandomAgent}
+from hanabi_learning_environment.agents.random_tf_agent import RandomTFAgent
+
+# Currently available agents
+AGENT_CLASSES = {'SimpleAgent': SimpleAgent, 'RandomAgent': RandomAgent, 'RandomTFAgent' : RandomTFAgent}
 
 
 class Runner(object):
@@ -29,53 +32,55 @@ class Runner(object):
 
   def __init__(self, flags):
     """Initialize runner."""
-    self.flags = flags
-    self.agent_config = {'players': flags['players']}
+    self.num_episodes = flags['num_episodes']
     self.environment = rl_env.make('Hanabi-Full', num_players=flags['players'])
-    self.agent_class = AGENT_CLASSES[flags['agent_class']]
+    self.agent_config = {'max_information_tokens' : self.environment.game.max_information_tokens(),
+                         'action_spec' : self.environment.action_spec(),
+                         'observation_spec' : self.environment.observation_spec()}
+    self.agent_1 = AGENT_CLASSES[flags['agent_1']](self.agent_config)
+    self.agent_2 = AGENT_CLASSES[flags['agent_2']](self.agent_config)
 
   def run(self):
     """Run episodes."""
     rewards = []
-    for episode in range(flags['num_episodes']):
-      observations = self.environment.reset()
-      agents = [self.agent_class(self.agent_config)
-                for _ in range(self.flags['players'])]
+    for episode in range(self.num_episodes):
+      time_step = self.environment.reset()
+      agents = [self.agent_1, self.agent_2]
       done = False
       episode_reward = 0
+
       while not done:
         for agent_id, agent in enumerate(agents):
-          observation = observations['player_observations'][agent_id]
-          action = agent.act(observation)
-          if observation['current_player'] == agent_id:
-            assert action is not None
-            current_player_action = action
+
+          # Make observations based on the type of agents
+          if isinstance(agent, RandomTFAgent):
+            observation = time_step.observation
           else:
-            assert action is None
-        # Make an environment step.
-        print('Agent: {} action: {}'.format(observation['current_player'],
-                                            current_player_action))
-        observations, reward, done, unused_info = self.environment.step(
-            current_player_action)
-        episode_reward += reward
+            observation = self.environment._make_observation_all_players()['player_observations'][agent_id]
+
+          # Action selection
+          action = agent.act(observation)
+
+          # Make an environment step
+          print('Agent: {} action: {}'.format(agent_id, action))
+          time_step = self.environment.step(action)
+
+          # Increase the reward of the episode
+          episode_reward += time_step.reward.numpy()
+
+          # Check for end of the episode
+          done = time_step.is_last()
+          if done:
+            break
+
       rewards.append(episode_reward)
       print('Running episode: %d' % episode)
-      print('Max Reward: %.3f' % max(rewards))
+      print('Max reward in the current run: %.3f' % max(rewards))
     return rewards
 
 if __name__ == "__main__":
-  flags = {'players': 2, 'num_episodes': 1, 'agent_class': 'SimpleAgent'}
-  options, arguments = getopt.getopt(sys.argv[1:], '',
-                                     ['players=',
-                                      'num_episodes=',
-                                      'agent_class='])
-  if arguments:
-    sys.exit('usage: rl_env_example.py [options]\n'
-             '--players       number of players in the game.\n'
-             '--num_episodes  number of game episodes to run.\n'
-             '--agent_class   {}'.format(' or '.join(AGENT_CLASSES.keys())))
-  for flag, value in options:
-    flag = flag[2:]  # Strip leading --.
-    flags[flag] = type(flags[flag])(value)
+  flags = {'players': 2, 'num_episodes': 5, 'agent_1': 'RandomTFAgent', 'agent_2': 'SimpleAgent'}
+  if flags['players'] != 2:
+    sys.exit("Only 2 player games are supported currently.")
   runner = Runner(flags)
-  runner.run()
+  print('Rewards of the episode(s): {}'.format(runner.run()))

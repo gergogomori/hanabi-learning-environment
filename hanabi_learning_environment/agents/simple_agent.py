@@ -21,9 +21,7 @@ class SimpleAgent(Agent):
 
   def __init__(self, config, *args, **kwargs):
     """Initialize the agent."""
-    self.config = config
-    # Extract max info tokens or set default to 8.
-    self.max_information_tokens = config.get('information_tokens', 8)
+    self.max_information_tokens = config['max_information_tokens']
 
   @staticmethod
   def playable_card(card, fireworks):
@@ -32,8 +30,6 @@ class SimpleAgent(Agent):
 
   def act(self, observation):
     """Act based on an observation."""
-    if observation['current_player_offset'] != 0:
-      return None
 
     # Check if there are any pending hints and play the card corresponding to
     # the hint.
