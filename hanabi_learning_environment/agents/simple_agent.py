@@ -13,10 +13,7 @@
 # limitations under the License.
 """Simple Agent."""
 
-from hanabi_learning_environment.rl_env import Agent
-
-
-class SimpleAgent(Agent):
+class SimpleAgent:
   """Agent that applies a simple heuristic."""
 
   def __init__(self, config, *args, **kwargs):

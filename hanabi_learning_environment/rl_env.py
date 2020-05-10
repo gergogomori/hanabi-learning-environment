@@ -19,7 +19,6 @@ from __future__ import division
 from hanabi_learning_environment import pyhanabi
 from hanabi_learning_environment.pyhanabi import color_char_to_idx
 
-import numpy as np
 import tensorflow as tf
 from tf_agents.environments import py_environment
 from tf_agents.specs import tensor_spec
@@ -73,7 +72,7 @@ class HanabiEnv(py_environment.PyEnvironment):
     self.players = self.game.num_players()
 
     self._action_spec = tensor_spec.BoundedTensorSpec(shape=(), dtype=tf.int32, minimum=0, maximum=self.num_moves() - 1, name='action')
-    self._observation_spec = tensor_spec.BoundedTensorSpec(shape=(self.players, self.vectorized_observation_shape()[0]), dtype=tf.int32, minimum=0, maximum=1, name='observation')
+    self._observation_spec = tensor_spec.BoundedTensorSpec(shape=(self.vectorized_observation_shape()[0], ), dtype=tf.int32, minimum=0, maximum=1, name='observation')
 
   def action_spec(self):
     return self._action_spec
@@ -94,8 +93,7 @@ class HanabiEnv(py_environment.PyEnvironment):
     while self.state.cur_player() == pyhanabi.CHANCE_PLAYER_ID:
       self.state.deal_random_card()
 
-    obs = self._make_observation_all_players()['player_observations']
-    observation = [obs[i]['vectorized'] for i in range(self.players)]
+    observation = self._make_observation_all_players()['player_observations'][0]['vectorized']
 
     return ts.restart(tf.convert_to_tensor(observation, dtype=tf.int32))
 
@@ -137,15 +135,15 @@ class HanabiEnv(py_environment.PyEnvironment):
     # 1) Apply the action
 
     # Convert action input to a valid type
-    if isinstance(action, tf.Tensor):
-        action = action.numpy().tolist()
+    if not isinstance(action, dict):
+        action = action.tolist()
 
     # In case it is an illegal action, terminate the episode
     obs = self._make_observation_all_players()['player_observations']
     if (action not in obs[self.state.cur_player()]['legal_moves']) and (action not in obs[self.state.cur_player()]['legal_moves_as_int']):
-        observation = [obs[i]['vectorized'] for i in range(self.players)]
+        observation = obs[0]['vectorized']
         print("Illegal action! Episode terminated.")
-        return ts.termination(tf.convert_to_tensor(observation, dtype=tf.int32), tf.convert_to_tensor(0.0, dtype=tf.float32))
+        return ts.termination(tf.convert_to_tensor(observation, dtype=tf.int32), tf.convert_to_tensor(-1.0, dtype=tf.float32))
 
     # Convert action for backend
     if isinstance(action, dict):
@@ -167,8 +165,7 @@ class HanabiEnv(py_environment.PyEnvironment):
       self.state.deal_random_card()
 
     # 2) Make observation
-    obs = self._make_observation_all_players()['player_observations']
-    observation = [obs[i]['vectorized'] for i in range(self.players)]
+    observation = self._make_observation_all_players()['player_observations'][0]['vectorized']
 
     # 3) Calculate reward
     # Reward is score difference. May be negative at the end of the episode.
@@ -297,6 +294,7 @@ class HanabiEnv(py_environment.PyEnvironment):
           target_offset=target_offset, rank=rank)
     elif action_type == "REVEAL_COLOR":
       target_offset = action["target_offset"]
+      action["color"] = action["color"].tolist()
       assert isinstance(action["color"], str)
       color = color_char_to_idx(action["color"])
       move = pyhanabi.HanabiMove.get_reveal_color_move(
@@ -398,122 +396,3 @@ def make(environment_name="Hanabi-Full", num_players=2, pyhanabi_path=None):
         })
   else:
     raise ValueError("Unknown environment {}".format(environment_name))
-
-
-#-------------------------------------------------------------------------------
-# Hanabi Agent API
-#-------------------------------------------------------------------------------
-
-class Agent(object):
-  """Agent interface.
-
-  All concrete implementations of an Agent should derive from this interface
-  and implement the method stubs.
-
-
-  ```python
-
-  class MyAgent(Agent):
-    ...
-
-  agents = [MyAgent(config) for _ in range(players)]
-  while not done:
-    ...
-    for agent_id, agent in enumerate(agents):
-      action = agent.act(observation)
-      if obs.current_player == agent_id:
-        assert action is not None
-      else
-        assert action is None
-    ...
-  ```
-  """
-
-  def __init__(self, config, *args, **kwargs):
-    r"""Initialize the agent.
-
-    Args:
-      config: dict, With parameters for the game. Config takes the following
-        keys and values.
-          - colors: int, Number of colors \in [2,5].
-          - ranks: int, Number of ranks \in [2,5].
-          - players: int, Number of players \in [2,5].
-          - hand_size: int, Hand size \in [4,5].
-          - max_information_tokens: int, Number of information tokens (>=0)
-          - max_life_tokens: int, Number of life tokens (>=0)
-          - seed: int, Random seed.
-          - random_start_player: bool, Random start player.
-      *args: Optional arguments
-      **kwargs: Optional keyword arguments.
-
-    Raises:
-      AgentError: Custom exceptions.
-    """
-    raise NotImplementedError("Not implemeneted in abstract base class.")
-
-  def reset(self, config):
-    r"""Reset the agent with a new config.
-
-    Signals agent to reset and restart using a config dict.
-
-    Args:
-      config: dict, With parameters for the game. Config takes the following
-        keys and values.
-          - colors: int, Number of colors \in [2,5].
-          - ranks: int, Number of ranks \in [2,5].
-          - players: int, Number of players \in [2,5].
-          - hand_size: int, Hand size \in [4,5].
-          - max_information_tokens: int, Number of information tokens (>=0)
-          - max_life_tokens: int, Number of life tokens (>=0)
-          - seed: int, Random seed.
-          - random_start_player: bool, Random start player.
-    """
-    raise NotImplementedError("Not implemeneted in abstract base class.")
-
-  def act(self, observation):
-    """Act based on an observation.
-
-    Args:
-      observation: dict, containing observation from the view of this agent.
-        An example:
-        {'current_player': 0,
-         'current_player_offset': 1,
-         'deck_size': 40,
-         'discard_pile': [],
-         'fireworks': {'B': 0,
-                   'G': 0,
-                   'R': 0,
-                   'W': 0,
-                   'Y': 0},
-         'information_tokens': 8,
-         'legal_moves': [],
-         'life_tokens': 3,
-         'observed_hands': [[{'color': None, 'rank': -1},
-                         {'color': None, 'rank': -1},
-                         {'color': None, 'rank': -1},
-                         {'color': None, 'rank': -1},
-                         {'color': None, 'rank': -1}],
-                        [{'color': 'W', 'rank': 2},
-                         {'color': 'Y', 'rank': 4},
-                         {'color': 'Y', 'rank': 2},
-                         {'color': 'G', 'rank': 0},
-                         {'color': 'W', 'rank': 1}]],
-         'num_players': 2}]}
-
-    Returns:
-      action: dict, mapping to a legal action taken by this agent. The following
-        actions are supported:
-          - { 'action_type': 'PLAY', 'card_index': int }
-          - { 'action_type': 'DISCARD', 'card_index': int }
-          - {
-              'action_type': 'REVEAL_COLOR',
-              'color': str,
-              'target_offset': int >=0
-            }
-          - {
-              'action_type': 'REVEAL_RANK',
-              'rank': str,
-              'target_offset': int >=0
-            }
-    """
-    raise NotImplementedError("Not implemented in Abstract Base class")

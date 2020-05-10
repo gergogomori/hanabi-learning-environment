@@ -16,15 +16,15 @@
 from __future__ import print_function
 
 import sys
-import getopt
 from hanabi_learning_environment import rl_env
 from hanabi_learning_environment.agents.random_agent import RandomAgent
 from hanabi_learning_environment.agents.simple_agent import SimpleAgent
 
-from hanabi_learning_environment.agents.random_tf_agent import RandomTFAgent
+from tf_agents.environments import batched_py_environment
+from hanabi_learning_environment.agents.dqn_agent import DQNAgent
 
 # Currently available agents
-AGENT_CLASSES = {'SimpleAgent': SimpleAgent, 'RandomAgent': RandomAgent, 'RandomTFAgent' : RandomTFAgent}
+AGENT_CLASSES = {'DQNAgent' : DQNAgent, 'SimpleAgent': SimpleAgent, 'RandomAgent': RandomAgent}
 
 
 class Runner(object):
@@ -33,8 +33,8 @@ class Runner(object):
   def __init__(self, flags):
     """Initialize runner."""
     self.num_episodes = flags['num_episodes']
-    self.environment = rl_env.make('Hanabi-Full', num_players=flags['players'])
-    self.agent_config = {'max_information_tokens' : self.environment.game.max_information_tokens(),
+    self.environment = batched_py_environment.BatchedPyEnvironment([rl_env.make('Hanabi-Full', num_players=flags['players'])])
+    self.agent_config = {'max_information_tokens' : self.environment.envs[0].game.max_information_tokens(),
                          'action_spec' : self.environment.action_spec(),
                          'observation_spec' : self.environment.observation_spec()}
     self.agent_1 = AGENT_CLASSES[flags['agent_1']](self.agent_config)
@@ -43,6 +43,7 @@ class Runner(object):
   def run(self):
     """Run episodes."""
     rewards = []
+    shouldAgentLearn = False
     for episode in range(self.num_episodes):
       time_step = self.environment.reset()
       agents = [self.agent_1, self.agent_2]
@@ -51,36 +52,45 @@ class Runner(object):
 
       while not done:
         for agent_id, agent in enumerate(agents):
+          if shouldAgentLearn:
+            agent.learn()
+            shouldAgentLearn = False
 
-          # Make observations based on the type of agents
-          if isinstance(agent, RandomTFAgent):
-            observation = time_step.observation
+          # Make observation and select an action based on the type of the agent
+          if agent_id == 0:
+            last_time_step = time_step
+            action_step = agent.act(time_step)
+            action = action_step.action
           else:
-            observation = self.environment._make_observation_all_players()['player_observations'][agent_id]
-
-          # Action selection
-          action = agent.act(observation)
+            observation = self.environment.envs[0]._make_observation_all_players()['player_observations'][agent_id]
+            action = agent.act(observation)
 
           # Make an environment step
           print('Agent: {} action: {}'.format(agent_id, action))
           time_step = self.environment.step(action)
 
+          if agent_id == 0:
+            next_time_step = time_step
+            agent.collect(last_time_step, action_step, next_time_step)
+
           # Increase the reward of the episode
-          episode_reward += time_step.reward.numpy()
+          episode_reward += time_step.reward[0].tolist()
 
           # Check for end of the episode
           done = time_step.is_last()
           if done:
+            shouldAgentLearn = True
             break
 
       rewards.append(episode_reward)
-      print('Running episode: %d' % episode)
+      print('Episode %d ended.' % (episode+1))
       print('Max reward in the current run: %.3f' % max(rewards))
     return rewards
 
 if __name__ == "__main__":
-  flags = {'players': 2, 'num_episodes': 5, 'agent_1': 'RandomTFAgent', 'agent_2': 'SimpleAgent'}
-  if flags['players'] != 2:
-    sys.exit("Only 2 player games are supported currently.")
+  flags = {'players': 2, 'num_episodes': 5, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
+  # Only 2 player games where the first agent is the learning agent are supported.
+  if flags['players'] != 2 or flags['agent_1'] != 'DQNAgent':
+    sys.exit("Currently this setup is not supported.")
   runner = Runner(flags)
-  print('Rewards of the episode(s): {}'.format(runner.run()))
+  print('Reward(s) of the episode(s): {}'.format(runner.run()))

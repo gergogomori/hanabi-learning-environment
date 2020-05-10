@@ -14,10 +14,8 @@
 """Random Agent."""
 
 from random import choice
-from hanabi_learning_environment.rl_env import Agent
 
-
-class RandomAgent(Agent):
+class RandomAgent:
   """Agent that takes random legal actions."""
 
   def __init__(self, config, *args, **kwargs):
