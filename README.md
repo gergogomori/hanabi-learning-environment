@@ -1,13 +1,16 @@
-## Introduction
+## Introduction to the project
 
-The original Hanabi repository from Deepmind was modified in order to test how rule-based agents and learning agents play Hanabi togeher.
-Currently the focus is on only 2 players: one rule-based agent and one learning agent.
+The original Hanabi repository from DeepMind was modified in order to test how rule-based agents and learning agents play Hanabi togeher.
+Currently the focus is on only 2 players: one learning agent and one rule-based agent.
+The first agent is always the learning agent.
 Learning agents are planned to be modifications of agents implemented in [tf-agents](https://www.tensorflow.org/agents/overview).
 
 tf-agents has to be installed in order to run "examples/rl_env_example.py".
 
+A DQN agent was added to the available pool of agents. It is playing together with the original "SimpleAgent".
 
-## Original Readme
+
+## Original README
 
 This is not an officially supported Google product.
 
