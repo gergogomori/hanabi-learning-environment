@@ -43,8 +43,8 @@ class SimpleAgent:
         player_hints = observation['card_knowledge'][player_offset]
         # Check if the card in the hand of the opponent is playable.
         for card, hint in zip(player_hand, player_hints):
-          if SimpleAgent.playable_card(card,
-                                       fireworks) and hint['color'] is None:
+          if SimpleAgent.playable_card(card, fireworks) and hint['color'] is None:
+            print("Hint given because the card is playable!")
             return {
                 'action_type': 'REVEAL_COLOR',
                 'color': card['color'],

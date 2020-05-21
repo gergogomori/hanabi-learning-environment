@@ -16,6 +16,9 @@
 from __future__ import print_function
 
 import sys
+import math
+import matplotlib.pyplot as plt
+
 from hanabi_learning_environment import rl_env
 from hanabi_learning_environment.agents.random_agent import RandomAgent
 from hanabi_learning_environment.agents.simple_agent import SimpleAgent
@@ -88,9 +91,19 @@ class Runner(object):
     return rewards
 
 if __name__ == "__main__":
-  flags = {'players': 2, 'num_episodes': 5, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
+  flags = {'players': 2, 'num_episodes': 100, 'num_eval_episodes': 10, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
   # Only 2 player games where the first agent is the learning agent are supported.
   if flags['players'] != 2 or flags['agent_1'] != 'DQNAgent':
     sys.exit("Currently this setup is not supported.")
   runner = Runner(flags)
-  print('Reward(s) of the episode(s): {}'.format(runner.run()))
+  result = runner.run()
+  print('Reward(s) of the episode(s): {}'.format(result))
+
+  # Metrics - Average return
+  average_return = []
+  num_eval_episodes = flags['num_eval_episodes']
+  for i in range(0, len(result), num_eval_episodes):
+    average_return.append(math.fsum(result[i : i + num_eval_episodes]) / num_eval_episodes)
+  plt.plot(average_return)
+  plt.title("Average return")
+  plt.show()
