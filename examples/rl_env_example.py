@@ -54,7 +54,9 @@ class Runner(object):
       done = False
       should_agent_learn = False
       episode_reward = 0
-      last_action = None
+
+      prev_knowledge = [{'color': None, 'rank': None}, {'color': None, 'rank': None}, {'color': None, 'rank': None}, {'color': None, 'rank': None}, {'color': None, 'rank': None}]
+      card_playable = False
 
       while not done:
         for agent_id, agent in enumerate(agents):
@@ -65,12 +67,12 @@ class Runner(object):
           # Make observation and select an action based on the type of the agent
           if agent_id == 0:
             last_time_step = time_step
-            action_step = agent.act(time_step, last_action, episode_counter)
+            current_knowledge = self.environment.envs[0]._make_observation_all_players()['player_observations'][agent_id]['card_knowledge'][agent_id]
+            action_step = agent.act(time_step, episode_counter, prev_knowledge, current_knowledge, card_playable)
             action = action_step.action
           else:
             observation = self.environment.envs[0]._make_observation_all_players()['player_observations'][agent_id]
-            action = agent.act(observation)
-            last_action = action
+            action, card_playable = agent.act(observation)
 
           # Make an environment step
           print('Agent: {} action: {}'.format(agent_id, action))
@@ -79,6 +81,7 @@ class Runner(object):
           if agent_id == 0:
             next_time_step = time_step
             agent.collect(last_time_step, action_step, next_time_step)
+            prev_knowledge = self.environment.envs[0]._make_observation_all_players()['player_observations'][agent_id]['card_knowledge'][agent_id]
 
           # Increase the reward of the episode
           episode_reward += time_step.reward[0].tolist()

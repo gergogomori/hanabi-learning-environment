@@ -32,7 +32,7 @@ class SimpleAgent:
     # the hint.
     for card_index, hint in enumerate(observation['card_knowledge'][0]):
       if hint['color'] is not None or hint['rank'] is not None:
-        return {'action_type': 'PLAY', 'card_index': card_index}
+        return [{'action_type': 'PLAY', 'card_index': card_index}, False]
 
     # Check if it's possible to hint a card to your colleagues.
     fireworks = observation['fireworks']
@@ -45,14 +45,14 @@ class SimpleAgent:
         for card, hint in zip(player_hand, player_hints):
           if SimpleAgent.playable_card(card, fireworks) and hint['color'] is None:
             print("Hint given because the card is playable!")
-            return {
+            return [{
                 'action_type': 'REVEAL_COLOR',
                 'color': card['color'],
                 'target_offset': player_offset
-            }
+            }, True]
 
     # If no card is hintable then discard or play.
     if observation['information_tokens'] < self.max_information_tokens:
-      return {'action_type': 'DISCARD', 'card_index': 0}
+      return [{'action_type': 'DISCARD', 'card_index': 0}, False]
     else:
-      return {'action_type': 'PLAY', 'card_index': 0}
+      return [{'action_type': 'PLAY', 'card_index': 0}, False]

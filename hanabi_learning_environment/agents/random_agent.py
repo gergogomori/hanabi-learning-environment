@@ -24,4 +24,4 @@ class RandomAgent:
 
   def act(self, observation):
     """Act based on an observation."""
-    return choice(observation['legal_moves'])
+    return [choice(observation['legal_moves']), False]

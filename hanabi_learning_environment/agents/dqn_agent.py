@@ -1,12 +1,14 @@
 """DQN Agent."""
 
 import tensorflow as tf
+import numpy as np
 from tf_agents.trajectories import trajectory, time_step as ts
 from tf_agents.networks import q_network
 from tf_agents.agents.dqn import dqn_agent
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 import random
 from tf_agents.policies import random_tf_policy
+from tf_agents.policies import fixed_policy
 
 class DQNAgent:
 
@@ -41,20 +43,36 @@ class DQNAgent:
 
     self.random_policy = random_tf_policy.RandomTFPolicy(self.time_step_spec, self.action_spec)
 
+    self.intention_classifier = tf.keras.models.Sequential(
+      [tf.keras.layers.Dense(1, input_shape=self.observation_spec.shape, activation='sigmoid')])
+
+    self.intention_dataset = []
+
   def set_epsilon(self, counter):
     if counter > 1e6:
       self.epsilon = 1e6 / counter
 
-  def act(self, time_step, last_action, episode_counter):
-    # Implement intention classifier which gives a boolean output
-    # True: play the hinted card
-    # False: epsilon-greedy
-
-    # if lastAction['action_type'] == 'REVEAL_COLOR' and 'output of Intention classifier == TRUE':
-    #   play hinted card
-    # else: epsilon-greedy
-
+  def act(self, time_step, episode_counter, prev_knowledge, current_knowledge, card_playable):
     self.set_epsilon(episode_counter)
+
+    hinted = []
+    candidate_action = -1
+    for i, cards in enumerate(zip(prev_knowledge, current_knowledge)):
+      if cards[0] != cards[1]:
+        hinted.append(i)
+
+    if len(hinted) == 1:
+      candidate_action = 5 + hinted[0]
+
+    confidence_of_hint = self.intention_classifier(time_step.observation).numpy()[0,0]
+    self.intention_dataset.append([confidence_of_hint, float(card_playable)])
+
+    if (confidence_of_hint > 0.6) and (self.epsilon < 0.7) and (candidate_action != -1):
+      candidate_action = tf.convert_to_tensor(candidate_action, dtype=tf.int32)
+      policy = fixed_policy.FixedPolicy(candidate_action, self.time_step_spec, self.action_spec)
+      time_step = ts.restart(tf.ones(self.time_step_spec.observation.shape))
+      print("Hinted card played!")
+      return policy.action(time_step)
 
     if random.random() > self.epsilon:
       action_step = self.agent.policy.action(time_step)
@@ -74,3 +92,8 @@ class DQNAgent:
         self.agent.train(experience)
 
     self.replay_buffer.clear()
+
+    # Implement the learning phase of the intention classifier here!
+    # self.intention_dataset is a list, its elements are lists as well, only 2 element long, fist is prediction, second true value
+
+    self.intention_dataset = []
