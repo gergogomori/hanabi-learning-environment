@@ -46,27 +46,31 @@ class Runner(object):
   def run(self):
     """Run episodes."""
     rewards = []
-    shouldAgentLearn = False
+    episode_counter = 1
+
     for episode in range(self.num_episodes):
       time_step = self.environment.reset()
       agents = [self.agent_1, self.agent_2]
       done = False
+      should_agent_learn = False
       episode_reward = 0
+      last_action = None
 
       while not done:
         for agent_id, agent in enumerate(agents):
-          if shouldAgentLearn:
+          if should_agent_learn:
             agent.learn()
-            shouldAgentLearn = False
+            should_agent_learn = False
 
           # Make observation and select an action based on the type of the agent
           if agent_id == 0:
             last_time_step = time_step
-            action_step = agent.act(time_step)
+            action_step = agent.act(time_step, last_action, episode_counter)
             action = action_step.action
           else:
             observation = self.environment.envs[0]._make_observation_all_players()['player_observations'][agent_id]
             action = agent.act(observation)
+            last_action = action
 
           # Make an environment step
           print('Agent: {} action: {}'.format(agent_id, action))
@@ -82,7 +86,8 @@ class Runner(object):
           # Check for end of the episode
           done = time_step.is_last()
           if done:
-            shouldAgentLearn = True
+            should_agent_learn = True
+            episode_counter += 1
             break
 
       rewards.append(episode_reward)
@@ -91,7 +96,7 @@ class Runner(object):
     return rewards
 
 if __name__ == "__main__":
-  flags = {'players': 2, 'num_episodes': 100, 'num_eval_episodes': 10, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
+  flags = {'players': 2, 'num_episodes': 10, 'num_eval_episodes': 2, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
   # Only 2 player games where the first agent is the learning agent are supported.
   if flags['players'] != 2 or flags['agent_1'] != 'DQNAgent':
     sys.exit("Currently this setup is not supported.")
@@ -106,4 +111,5 @@ if __name__ == "__main__":
     average_return.append(math.fsum(result[i : i + num_eval_episodes]) / num_eval_episodes)
   plt.plot(average_return)
   plt.title("Average return")
+  plt.savefig("average_return", dpi=300)
   plt.show()

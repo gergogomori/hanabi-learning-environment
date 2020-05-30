@@ -37,11 +37,25 @@ class DQNAgent:
       num_steps=2,
       single_deterministic_pass=True)
 
-    self.epsilon = 0.3
+    self.epsilon = 1.0
 
     self.random_policy = random_tf_policy.RandomTFPolicy(self.time_step_spec, self.action_spec)
 
-  def act(self, time_step):
+  def set_epsilon(self, counter):
+    if counter > 1e6:
+      self.epsilon = 1e6 / counter
+
+  def act(self, time_step, last_action, episode_counter):
+    # Implement intention classifier which gives a boolean output
+    # True: play the hinted card
+    # False: epsilon-greedy
+
+    # if lastAction['action_type'] == 'REVEAL_COLOR' and 'output of Intention classifier == TRUE':
+    #   play hinted card
+    # else: epsilon-greedy
+
+    self.set_epsilon(episode_counter)
+
     if random.random() > self.epsilon:
       action_step = self.agent.policy.action(time_step)
     else:
