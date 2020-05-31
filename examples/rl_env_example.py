@@ -45,16 +45,15 @@ class Runner(object):
 
   def run(self):
     """Run episodes."""
+    agents = [self.agent_1, self.agent_2]
     rewards = []
     episode_counter = 1
+    should_agent_learn = False
 
     for episode in range(self.num_episodes):
       time_step = self.environment.reset()
-      agents = [self.agent_1, self.agent_2]
       done = False
-      should_agent_learn = False
       episode_reward = 0
-
       prev_knowledge = [{'color': None, 'rank': None}, {'color': None, 'rank': None}, {'color': None, 'rank': None}, {'color': None, 'rank': None}, {'color': None, 'rank': None}]
       card_playable = False
 

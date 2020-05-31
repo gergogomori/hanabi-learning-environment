@@ -46,7 +46,10 @@ class DQNAgent:
     self.intention_classifier = tf.keras.models.Sequential(
       [tf.keras.layers.Dense(1, input_shape=self.observation_spec.shape, activation='sigmoid')])
 
-    self.intention_dataset = []
+    self.intention_classifier.compile(optimizer=self.optimizer, loss=tf.keras.losses.BinaryCrossentropy())
+
+    self.intention_dataset_input = []
+    self.intention_dataset_true = []
 
   def set_epsilon(self, counter):
     if counter > 1e6:
@@ -64,8 +67,10 @@ class DQNAgent:
     if len(hinted) == 1:
       candidate_action = 5 + hinted[0]
 
+    self.intention_dataset_input.append(time_step.observation[0])
+    self.intention_dataset_true.append(int(card_playable))
+
     confidence_of_hint = self.intention_classifier(time_step.observation).numpy()[0,0]
-    self.intention_dataset.append([confidence_of_hint, float(card_playable)])
 
     if (confidence_of_hint > 0.6) and (self.epsilon < 0.7) and (candidate_action != -1):
       candidate_action = tf.convert_to_tensor(candidate_action, dtype=tf.int32)
@@ -93,7 +98,6 @@ class DQNAgent:
 
     self.replay_buffer.clear()
 
-    # Implement the learning phase of the intention classifier here!
-    # self.intention_dataset is a list, its elements are lists as well, only 2 element long, fist is prediction, second true value
-
-    self.intention_dataset = []
+    self.intention_classifier.fit(np.asarray(self.intention_dataset_input), np.asarray(self.intention_dataset_true), batch_size=1)
+    self.intention_dataset_input = []
+    self.intention_dataset_true = []
