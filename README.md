@@ -1,13 +1,17 @@
 ## Introduction to the project
 
-The original Hanabi repository from DeepMind was modified in order to test how rule-based agents and learning agents play Hanabi togeher.
-Currently the focus is on only 2 players: one learning agent and one rule-based agent.
+The original Hanabi repository from DeepMind was modified in order to test how a learning agent and rule-based agents play Hanabi togeher.
+Currently the focus is only on two players: one learning agent and one rule-based agent.
 The first agent is always the learning agent.
-Learning agents are planned to be modifications of agents implemented in [tf-agents](https://www.tensorflow.org/agents/overview).
+Learning agents can be modifications of agents implemented in [tf-agents](https://www.tensorflow.org/agents/overview).
 
 tf-agents has to be installed in order to run "examples/rl_env_example.py".
+This is the file controlling the games and running basic metrics.
 
-A DQN agent was added to the available pool of agents. It is playing together with the original "SimpleAgent".
+A DQN agent was added to the pool of available agents. Currently a DQN agent is playing together with the original "SimpleAgent", which is a purely rule-based agent.
+The DQN agent utilizes a RNN as its Q-Network.
+It also has a module called "intention classifier". The aim of this unit is to learn the intentions of its teammate, thus playing cards when it can.
+This is a seperate NN, it is trained from the feedback it receives after each game. (During the game the agents only communicate via hints, obeying the rules of the game.)
 
 
 ## Original README
