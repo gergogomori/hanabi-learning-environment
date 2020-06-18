@@ -168,8 +168,12 @@ class HanabiEnv(py_environment.PyEnvironment):
     observation = self._make_observation_all_players()['player_observations'][0]['vectorized']
 
     # 3) Calculate reward
-    # Reward is score difference. May be negative at the end of the episode.
-    reward = tf.convert_to_tensor(self.state.score() - last_score, dtype=tf.float32)
+    if self.state.score() < last_score:
+        current_score = last_score
+    else:
+        current_score = self.state.score()
+
+    reward = tf.convert_to_tensor(current_score - last_score, dtype=tf.float32)
 
     # 4) Compute the returned time_step
     if self.state.is_terminal():

@@ -39,7 +39,8 @@ class Runner(object):
     self.environment = batched_py_environment.BatchedPyEnvironment([rl_env.make('Hanabi-Full', num_players=flags['players'])])
     self.agent_config = {'max_information_tokens' : self.environment.envs[0].game.max_information_tokens(),
                          'action_spec' : self.environment.action_spec(),
-                         'observation_spec' : self.environment.observation_spec()}
+                         'observation_spec' : self.environment.observation_spec(),
+                         'environment_batch_size' : self.environment.batch_size}
     self.agent_1 = AGENT_CLASSES[flags['agent_1']](self.agent_config)
     self.agent_2 = AGENT_CLASSES[flags['agent_2']](self.agent_config)
 
@@ -47,7 +48,6 @@ class Runner(object):
     """Run episodes."""
     agents = [self.agent_1, self.agent_2]
     rewards = []
-    episode_counter = 1
     should_agent_learn = False
 
     for episode in range(self.num_episodes):
@@ -56,6 +56,7 @@ class Runner(object):
       episode_reward = 0
       prev_knowledge = [{'color': None, 'rank': None}, {'color': None, 'rank': None}, {'color': None, 'rank': None}, {'color': None, 'rank': None}, {'color': None, 'rank': None}]
       card_playable = False
+      prev_policy_state = agents[0].initial_policy_state()
 
       while not done:
         for agent_id, agent in enumerate(agents):
@@ -67,13 +68,23 @@ class Runner(object):
           if agent_id == 0:
             last_time_step = time_step
             current_knowledge = self.environment.envs[0]._make_observation_all_players()['player_observations'][agent_id]['card_knowledge'][agent_id]
-            action_step = agent.act(time_step, episode_counter, prev_knowledge, current_knowledge, card_playable)
+            action_step = agent.act(time_step, prev_policy_state, prev_knowledge, current_knowledge, card_playable)
+
+            # In case a hinted card was played previously, keep the policy_state
+            if action_step.state == ():
+              policy_state = prev_policy_state
+            else:
+              policy_state = action_step.state
+
+            prev_policy_state = policy_state
             action = action_step.action
           else:
             observation = self.environment.envs[0]._make_observation_all_players()['player_observations'][agent_id]
             action, card_playable = agent.act(observation)
 
           # Make an environment step
+          with open('results.txt', 'a') as the_file:
+            the_file.write('Agent: {} action: {}\n'.format(agent_id, action))
           print('Agent: {} action: {}'.format(agent_id, action))
           time_step = self.environment.step(action)
 
@@ -89,16 +100,17 @@ class Runner(object):
           done = time_step.is_last()
           if done:
             should_agent_learn = True
-            episode_counter += 1
             break
 
       rewards.append(episode_reward)
-      print('Episode %d ended.' % (episode+1))
+      with open('results.txt', 'a') as the_file:
+        the_file.write('Episode {} ended with reward {}.\n'.format(episode+1, episode_reward))
+      print('Episode {} ended with reward {}.'.format(episode+1, episode_reward))
       print('Max reward in the current run: %.3f' % max(rewards))
     return rewards
 
 if __name__ == "__main__":
-  flags = {'players': 2, 'num_episodes': 10, 'num_eval_episodes': 2, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
+  flags = {'players': 2, 'num_episodes': 100, 'num_eval_episodes': 2, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
   # Only 2 player games where the first agent is the learning agent are supported.
   if flags['players'] != 2 or flags['agent_1'] != 'DQNAgent':
     sys.exit("Currently this setup is not supported.")
