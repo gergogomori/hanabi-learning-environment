@@ -83,8 +83,6 @@ class Runner(object):
             action, card_playable = agent.act(observation)
 
           # Make an environment step
-          with open('results.txt', 'a') as the_file:
-            the_file.write('Agent: {} action: {}\n'.format(agent_id, action))
           print('Agent: {} action: {}'.format(agent_id, action))
           time_step = self.environment.step(action)
 
@@ -103,14 +101,12 @@ class Runner(object):
             break
 
       rewards.append(episode_reward)
-      with open('results.txt', 'a') as the_file:
-        the_file.write('Episode {} ended with reward {}.\n'.format(episode+1, episode_reward))
       print('Episode {} ended with reward {}.'.format(episode+1, episode_reward))
       print('Max reward in the current run: %.3f' % max(rewards))
     return rewards
 
 if __name__ == "__main__":
-  flags = {'players': 2, 'num_episodes': 100, 'num_eval_episodes': 2, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
+  flags = {'players': 2, 'num_episodes': 1000, 'num_eval_episodes': 5, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
   # Only 2 player games where the first agent is the learning agent are supported.
   if flags['players'] != 2 or flags['agent_1'] != 'DQNAgent':
     sys.exit("Currently this setup is not supported.")

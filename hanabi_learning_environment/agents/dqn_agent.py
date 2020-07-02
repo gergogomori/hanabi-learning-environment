@@ -95,12 +95,9 @@ class DQNAgent:
     if (confidence_of_hint > 0.85) and (candidate_action != -1):
       print("Hinted card is played!")
       print(current_knowledge)
-      with open('results.txt', 'a') as the_file:
-        the_file.write("Hinted card is played!\n")
-        the_file.write(str(current_knowledge) + "\n")
       candidate_action = tf.convert_to_tensor(candidate_action, dtype=tf.int32)
       policy = fixed_policy.FixedPolicy(candidate_action, self.time_step_spec, self.action_spec)
-      time_step = ts.restart(tf.ones(self.time_step_spec.observation.shape))
+      time_step = ts.restart(tf.ones(self.time_step_spec.observation.shape, dtype=tf.int32))
       action_step = policy.action(time_step)
     else:
       action_step = self.agent.collect_policy.action(time_step, policy_state)
