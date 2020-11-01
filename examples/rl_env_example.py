@@ -48,6 +48,7 @@ class Runner(object):
     """Run episodes."""
     agents = [self.agent_1, self.agent_2]
     rewards = []
+    played_hinted = []
     should_agent_learn = False
 
     for episode in range(self.num_episodes):
@@ -101,25 +102,30 @@ class Runner(object):
             break
 
       rewards.append(episode_reward)
+      played_hinted.append(agents[0].num_hinted)
       print('Episode {} ended with reward {}.'.format(episode+1, episode_reward))
       print('Max reward in the current run: %.3f' % max(rewards))
-    return rewards
+    return (rewards, played_hinted)
 
 if __name__ == "__main__":
-  flags = {'players': 2, 'num_episodes': 1000, 'num_eval_episodes': 5, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
-  # Only 2 player games where the first agent is the learning agent are supported.
+  flags = {'players': 2, 'num_episodes': 6000, 'num_eval_episodes': 60, 'agent_1': 'DQNAgent', 'agent_2': 'SimpleAgent'}
+  # Only 2 player games are supported.
+  # The first agent is the learning agent.
   if flags['players'] != 2 or flags['agent_1'] != 'DQNAgent':
     sys.exit("Currently this setup is not supported.")
   runner = Runner(flags)
-  result = runner.run()
+  result, hinted = runner.run()
   print('Reward(s) of the episode(s): {}'.format(result))
 
   # Metrics - Average return
   average_return = []
+  average_hinted = []
   num_eval_episodes = flags['num_eval_episodes']
   for i in range(0, len(result), num_eval_episodes):
     average_return.append(math.fsum(result[i : i + num_eval_episodes]) / num_eval_episodes)
-  plt.plot(average_return)
-  plt.title("Average return")
+    average_hinted.append(math.fsum(hinted[i : i + num_eval_episodes]) / num_eval_episodes)
+  plt.plot(average_return, label = 'Average score')
+  plt.plot(average_hinted, label = 'Average of hints noticed')
+  plt.legend()
   plt.savefig("average_return", dpi=300)
   plt.show()

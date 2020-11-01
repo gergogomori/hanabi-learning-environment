@@ -55,6 +55,8 @@ class DQNAgent:
     self.intention_dataset_input = []
     self.intention_dataset_true = []
 
+    self.num_hinted = 0
+
   def initial_policy_state(self):
     return self.agent.policy.get_initial_state(self.environment_batch_size)
 
@@ -95,6 +97,7 @@ class DQNAgent:
     if (confidence_of_hint > 0.85) and (candidate_action != -1):
       print("Hinted card is played!")
       print(current_knowledge)
+      self.num_hinted += 1
       candidate_action = tf.convert_to_tensor(candidate_action, dtype=tf.int32)
       policy = fixed_policy.FixedPolicy(candidate_action, self.time_step_spec, self.action_spec)
       time_step = ts.restart(tf.ones(self.time_step_spec.observation.shape, dtype=tf.int32))
@@ -121,3 +124,5 @@ class DQNAgent:
     self.intention_classifier.fit(np.asarray(self.intention_dataset_input), np.asarray(self.intention_dataset_true), batch_size=1)
     self.intention_dataset_input = []
     self.intention_dataset_true = []
+
+    self.num_hinted = 0

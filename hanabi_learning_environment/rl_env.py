@@ -143,7 +143,7 @@ class HanabiEnv(py_environment.PyEnvironment):
     if (action not in obs[self.state.cur_player()]['legal_moves']) and (action not in obs[self.state.cur_player()]['legal_moves_as_int']):
         observation = obs[0]['vectorized']
         print("Illegal action! Episode terminated.")
-        return ts.termination(tf.convert_to_tensor(observation, dtype=tf.int32), tf.convert_to_tensor(-10.0, dtype=tf.float32))
+        return ts.termination(tf.convert_to_tensor(observation, dtype=tf.int32), tf.convert_to_tensor(-1.0, dtype=tf.float32))
 
     # Convert action for backend
     if isinstance(action, dict):
