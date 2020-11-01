@@ -12,7 +12,7 @@ The DQN agent utilizes a RNN as its Q-Network.
 It also has a module called "intention recognizer". The aim of this unit is to learn the intentions of its teammate, thus playing cards when it can.
 This is a separate neural network and is trained with the feedback it receives after each game. (During the game the agents only communicate via hints, obeying the rules of the game.)
 
-Below is a comparison of two simulations of 6000 games. In the first scenario, the additional module was utilized, thus the agent noticed the moments of the game when it can play a card. In the second scenario, the "intention recognizer" was bypassed during the action selection step. Every other aspect of the two scenarios remained the same. An increase of the overall score can be observed.
+Below is a comparison of two simulations of 6000 games. The horizontal axis indicates the percentage of total games played. In the first scenario, the additional module was utilized, thus the agent noticed the moments of the game when it can play a card. In the second scenario, the "intention recognizer" was bypassed during the action selection step. Every other aspect of the two scenarios remained the same. An increase of the overall score can be observed when making a comparison.
 
  With "intention recognizer"   | Without "intention recognizer"
 :-----------------------------:|:-----------------------------:
